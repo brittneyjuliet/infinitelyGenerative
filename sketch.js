@@ -1,47 +1,69 @@
+let theShader;
+
 const SAMPLE_LIBRARY = {
-	'piano': [
-		{note: 'C#', octave: 2, file: 'data/Player_dyn3_rr1_008.wav'},
-		{note: 'C#', octave: 3, file: 'data/Player_dyn3_rr1_014.wav'},
-		{note: 'C#', octave: 4, file: 'data/Player_dyn3_rr1_020.wav'},
-		{note: 'C#', octave: 5, file: 'data/Player_dyn3_rr1_026.wav'},
-		{note: 'F', octave: 2, file: 'data/Player_dyn3_rr1_010.wav'},
-		{note: 'F', octave: 3, file: 'data/Player_dyn3_rr1_016.wav'},
-		{note: 'F', octave: 4, file: 'data/Player_dyn3_rr1_022.wav'},
-		{note: 'F', octave: 5, file: 'data/Player_dyn3_rr1_028.wav'},
-		{note: 'A', octave: 2, file: 'data/Player_dyn3_rr1_012.wav'},
-		{note: 'A', octave: 3, file: 'data/Player_dyn3_rr1_018.wav'},
-		{note: 'A', octave: 4, file: 'data/Player_dyn3_rr1_024.wav'},
-		{note: 'A', octave: 5, file: 'data/Player_dyn3_rr1_030.wav'}
+	'marimba': [
+		{note: 'F', octave: 2, file: 'data/Marimba_hit_Outrigger_F1_loud_01.wav'},
+		{note: 'C', octave: 2, file: 'data/Marimba_hit_Outrigger_C2_loud_01.wav'},
+		{note: 'G', octave: 2, file: 'data/Marimba_hit_Outrigger_G2_loud_01.wav'},
+		{note: 'B', octave: 2, file: 'data/Marimba_hit_Outrigger_B2_loud_01.wav'},
+		{note: 'F', octave: 3, file: 'data/Marimba_hit_Outrigger_F3_loud_01.wav'},
+		{note: 'C', octave: 4, file: 'data/Marimba_hit_Outrigger_C4_loud_01.wav'},
+		{note: 'G', octave: 4, file: 'data/Marimba_hit_Outrigger_G4_loud_01.wav'},
+		{note: 'B', octave: 4, file: 'data/Marimba_hit_Outrigger_B4_loud_01.wav'},
+		{note: 'F', octave: 5, file: 'data/Marimba_hit_Outrigger_F5_loud_01.wav'},
+		{note: 'C', octave: 6, file: 'data/Marimba_hit_Outrigger_C6_loud_01.wav'},
+	],
+	'synth': [
+		// {note: 'G', octave: 3, file: 'data/01_LF2_Texture_122_Cm7.wav'},
+		{note: 'A', octave: 3, file: 'data/LANDR_LS_Synth_Arp_Mood_keyAmin_100bpm.wav'},
+		{note: 'C', octave: 5, file: 'data/Erang - Dungeon Synth Free Samples Pack - 50 Pad_06_C.wav'}
+		
 	]
 };
 
 const OCTAVE = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 var sounds = [];
+let blobs = [];
 let button;
 let unLocked = true;
 let amplitude;
+let cVerb;
 
 function preload(){
-	for (let i = 0; i < SAMPLE_LIBRARY['piano'].length; i++){
-		sounds.push(loadSound(SAMPLE_LIBRARY['piano'][i].file));
+
+	theShader = loadShader('shader.vert', 'shader.frag');
+	cVerb = createConvolver('data/AirportTerminal.wav');
+
+	for (let i = 0; i < SAMPLE_LIBRARY['marimba'].length; i++){
+		sounds.push(loadSound(SAMPLE_LIBRARY['marimba'][i].file));
+		
+	}
+	for (let i = 0; i < SAMPLE_LIBRARY['synth'].length; i++){
+		sounds.push(loadSound(SAMPLE_LIBRARY['synth'][i].file));
 	}
 }
 
 function setup() {
-	createCanvas(windowWidth, windowHeight);
-	background(255);
 	// put setup code here
-
-	// for (var i = 0; i < sounds.length; i++){
-	// 	sounds[i].playMode('restart');
-	// }
+	pixelDensity(1);
+	createCanvas(windowWidth, windowHeight, WEBGL);
+	noStroke();
+	
+	for (let i = 0; i < 9; i++){
+		blobs.push(new Blobby(random(width), random(height)));
+	}
 
 	amplitude = new p5.Amplitude();
 
 	button = createButton('play');
 	button.mousePressed(begin);
 	button.center();
+
+	for (var i = 0; i < sounds.length; i++){
+		sounds[i].disconnect;
+		cVerb.process(sounds[i]);
+	}
 }
 
 function flatToSharp(note) {
@@ -65,11 +87,7 @@ function getSample(instrument, noteAndOctave){
 	let sample = getNearestSample(sampleBank, requestedNote, requestedOctave);
 	let distance = 
 		getNoteDistance(requestedNote, requestedOctave, sample.note, sample.octave);
-	// return fetchSample(sample.file).then(audioBuffer => ({
-	// 	audioBuffer: audioBuffer,
-	// 	distance: distance
-	// 	}));
-	//return [distance, sample.file];
+
 	return {
 		'distance': distance,
 		'file': sample.file
@@ -77,7 +95,6 @@ function getSample(instrument, noteAndOctave){
 }
 
 // returns unique integer identifier for each pitch
-
 function noteValue(note, octave){
 	//console.log(OCTAVE.indexOf(note));
 	return octave * 12 + OCTAVE.indexOf(note);
@@ -101,54 +118,71 @@ function getNearestSample(sampleBank, note, octave){
 	return sortedBank[0];
 }
 
-function playSample(instrument, note, delaySeconds){
-	// getSample(instrument, note).then(({distance}) => {
-	// 	let playbackRate = Math.pow(2, distance / 12);
-	// 	sample.file.play(0, playbackRate);
-	// });
+function playSample(instrument, note, delaySeconds, amplitude){
 	getSample(instrument, note);
 		let sampleInfo = getSample(instrument, note);
 		let playbackRate = Math.pow(2, sampleInfo.distance / 12);
-		let index = SAMPLE_LIBRARY['piano'].map(e => e.file).indexOf(sampleInfo.file);
-		sounds[index].play(delaySeconds, playbackRate);
-		//console.log(sounds[index].isPlaying());
+		let index = sounds.map(e => e.file).indexOf(sampleInfo.file);
+		sounds[index].play(delaySeconds, playbackRate, amplitude);
 }
 
-// Temporary test code
-function startLoop(instrument, note, loopLengthSeconds, delaySeconds){
-	// setTimeout(() => playSample('piano', 'F4'),  1000);
-	// setTimeout(() => playSample('piano', 'Ab4'), 2000);
-	// setTimeout(() => playSample('piano', 'C5'),  3000);
-	// setTimeout(() => playSample('piano', 'Db5'), 4000);
-	// setTimeout(() => playSample('piano', 'Eb5'), 5000);
-	// setTimeout(() => playSample('piano', 'F5'),  6000);
-	// setTimeout(() => playSample('piano', 'Ab5'), 7000);
-	playSample(instrument, note, delaySeconds);
-	setInterval(() => playSample(instrument, note, delaySeconds), loopLengthSeconds * 1000);	
+function startLoop(instrument, note, loopLengthSeconds, delaySeconds, amplitude){
+	// setTimeout(() => playSample('marimba', 'F4'),  1000);
+	// setTimeout(() => playSample('marimba', 'Ab4'), 2000);
+	// setTimeout(() => playSample('marimba', 'C5'),  3000);
+	// setTimeout(() => playSample('marimba', 'Db5'), 4000);
+	// setTimeout(() => playSample('marimba', 'Eb5'), 5000);
+	// setTimeout(() => playSample('marimba', 'F5'),  6000);
+	// setTimeout(() => playSample('marimba', 'Ab5'), 7000);
+	playSample(instrument, note, delaySeconds, amplitude);
+	setInterval(() => playSample(instrument, note, delaySeconds, amplitude), loopLengthSeconds * 1000);	
 }
 
 function begin(){
-	startLoop('piano', 'F4', random(20, 25), random(1, 4));
-	startLoop('piano', 'Ab4', random(15, 20), random(8, 10));
-	startLoop('piano', 'C5', random(22, 30), random(3, 6));
-	startLoop('piano', 'Db5', random(17, 22), random(8, 16));
-	startLoop('piano', 'Eb5', random(12, 15), random(8, 10));
-	startLoop('piano', 'F5', random(17, 24), random(8, 12));
-	startLoop('piano', 'Ab5', random(5, 7), random(2, 4));
+
+	startLoop('marimba', 'A2', random(20, 22), 13.9, 1);
+	startLoop('marimba', 'A4', 17.3, random(3, 6), 1);
+	startLoop('marimba', 'B4', random(20, 25), 3.2, 1);
+	startLoop('marimba', 'D5', 14.3, 12.6), 1;
+	startLoop('marimba', 'E5', random(18, 20), random(12, 15), 1);
+	startLoop('marimba', 'G5', random(12, 15), random(22, 23), 1);
+	startLoop('synth', 'G3', random(13, 15), 0.0, .3);
 }
 
 function draw() {
 	// put drawing code here
+	background(247);
 
 	let level = amplitude.getLevel();
-	let size = map(level, 0, 1, 0, height);
+	let size = map(level, 0, 1, .01, .07);
 
-	//ellipse(width/2, height/2, size, size);
+	// send resolution of sketch into shader
+	theShader.setUniform("u_resolution", [width, height]);
 
-	fill(random(255), random(255), random(255), random(127));
-	noStroke();
-	ellipse(random(width), random(height), size, size);
+	// we divide millis by 1000 to convert it to seconds
+	theShader.setUniform("u_time", millis() / 1000.0); 
 
-	//console.log(level);
+	// peak vol test
+	theShader.setUniform("u_size", size);
 
+	// bring on the blobs!!!
+	theShader.setUniform("u_blob0", [blobs[0].x, blobs[0].y]);
+	theShader.setUniform("u_blob1", [blobs[1].x, blobs[1].y]);
+	theShader.setUniform("u_blob2", [blobs[2].x, blobs[2].y]);
+	theShader.setUniform("u_blob3", [blobs[3].x, blobs[3].y]);
+	theShader.setUniform("u_blob4", [blobs[4].x, blobs[4].y]);
+	theShader.setUniform("u_blob5", [blobs[5].x, blobs[5].y]);
+	theShader.setUniform("u_blob6", [blobs[6].x, blobs[6].y]);
+	theShader.setUniform("u_blob7", [blobs[7].x, blobs[7].y]);
+
+	// shader() sets the active shader with our shader
+	shader(theShader);
+	rect(0, 0, width, height);
+
+	for (let i = 0; i < blobs.length; i++){
+		blobs[i].update();
+	}
 }
+
+
+
