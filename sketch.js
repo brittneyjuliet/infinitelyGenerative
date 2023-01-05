@@ -146,7 +146,7 @@ function begin(){
 	startLoop('marimba', 'D5', 14.3, 12.6), 1;
 	startLoop('marimba', 'E5', random(18, 20), random(12, 15), 1);
 	startLoop('marimba', 'G5', random(12, 15), random(22, 23), 1);
-	startLoop('synth', 'G3', random(13, 15), 0.0, .3);
+	startLoop('synth', 'G3', random(10, 12), 0.0, .3);
 }
 
 function draw() {
