@@ -66,6 +66,6 @@ void main() {
 
     // vec3 color = vec3(sum, .3, sum/r);
     vec3 color = vec3(sum/r, .8, sum);
-    gl_FragColor = vec4(color, .2);
+    gl_FragColor = vec4(color, .6);
 
 }
