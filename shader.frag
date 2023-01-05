@@ -64,8 +64,8 @@ void main() {
     float d7 = length(diff7);
     sum += 1. * r / d7;
 
-    // vec3 color = vec3(sum, .3, sum/r);
-    vec3 color = vec3(sum/r, .8, sum);
+    vec3 color = vec3(sum, .3, sum/r);
+    // vec3 color = vec3(sum/r, .8, sum);
     gl_FragColor = vec4(color, .6);
 
 }
